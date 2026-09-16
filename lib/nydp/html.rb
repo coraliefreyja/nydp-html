@@ -44,6 +44,38 @@ module Nydp
       end
     end
 
+    #
+    # =============================
+    # this is a set of hacks to re-create the old #suppress_eval behaviour
+    #
+    #
+
+    # generator ignores all dynamic (code) elements
+    class HamlNoDynamicGenerator < Temple::Generators::StringBuffer
+      def on_dynamic(code)
+        # no-op, we don't want to allow any ruby evaluation here
+      end
+    end
+
+    # engine excludes dynamic merger, and uses our own parser which is a copy of haml 7.5.1, with all ruby evaluation hacked out
+    class HamlNoDynamicEngine < Haml::Engine
+      remove Haml::Parser
+      remove Haml::DynamicMerger
+      prepend Nydp::HamlParser
+    end
+
+    # copy of Haml::Template, just using our own hacked engine instead of base haml engine
+    HamlNoDynamicTemplate = Temple::Templates::Tilt.create(
+      HamlNoDynamicEngine,
+      register_as: [:haml, :haml],
+    )
+
+    #
+    # this is the end of the hacks to re-create the old #suppress_eval behaviour
+    # see also: haml_parser.rb in this folder
+    # =============================
+    #
+
     class HamlToHtml
       include Nydp::Builtin::Base, Singleton
       def normalise_indentation txt
