@@ -280,18 +280,18 @@ module Nydp
       when ELEMENT; push tag(line)
       when COMMENT; push comment(line.text[1..-1].lstrip)
       when SANITIZE
-        return push plain(line.strip!(3), :escape_html) if line.text[1, 2] == '=='
-        return push script(line.strip!(2), :escape_html) if line.text[1] == SCRIPT
-        return push flat_script(line.strip!(2), :escape_html) if line.text[1] == FLAT_SCRIPT
-        return push plain(line.strip!(1), :escape_html) if line.text[1] == ?\s || line.text[1..2] == '#{'
+        # return push plain(line.strip!(3), :escape_html) if line.text[1, 2] == '=='
+        # return push script(line.strip!(2), :escape_html) if line.text[1] == SCRIPT
+        # return push flat_script(line.strip!(2), :escape_html) if line.text[1] == FLAT_SCRIPT
+        # return push plain(line.strip!(1), :escape_html) if line.text[1] == ?\s || line.text[1..2] == '#{'
         push plain(line)
       when FILTER; push filter(line.text[1..-1].downcase)
       when DOCTYPE
         return push doctype(line.text) if line.text[0, 3] == '!!!'
-        return push plain(line.strip!(3), false) if line.text[1, 2] == '=='
-        return push script(line.strip!(2), false) if line.text[1] == SCRIPT
-        return push flat_script(line.strip!(2), false) if line.text[1] == FLAT_SCRIPT
-        return push plain(line.strip!(1), false) if line.text[1] == ?\s || line.text[1..2] == '#{'
+        # return push plain(line.strip!(3), false) if line.text[1, 2] == '=='
+        # return push script(line.strip!(2), false) if line.text[1] == SCRIPT
+        # return push flat_script(line.strip!(2), false) if line.text[1] == FLAT_SCRIPT
+        # return push plain(line.strip!(1), false) if line.text[1] == ?\s || line.text[1..2] == '#{'
         push plain(line)
       when ESCAPE
         line.text = line.text[1..-1]
