@@ -117,7 +117,7 @@ module Nydp
       @indentation = nil
       @line = next_line
 
-      raise SyntaxError.new(::Haml::Error.message(:indenting_at_start), @line.index) if @line.tabs != 0
+      raise ::Haml::SyntaxError.new(::Haml::Error.message(:indenting_at_start), @line.index) if @line.tabs != 0
 
       loop do
         next_line
@@ -140,7 +140,7 @@ module Nydp
         end
 
         if !flat? && @next_line.tabs - @line.tabs > 1
-          raise SyntaxError.new(::Haml::Error.message(:deeper_indenting, @next_line.tabs - @line.tabs), @next_line.index)
+          raise ::Haml::SyntaxError.new(::Haml::Error.message(:deeper_indenting, @next_line.tabs - @line.tabs), @next_line.index)
         end
 
         @line = @next_line
@@ -161,7 +161,7 @@ module Nydp
         @indentation = line.whitespace
 
         if @indentation.include?(?\s) && @indentation.include?(?\t)
-          raise SyntaxError.new(::Haml::Error.message(:cant_use_tabs_and_spaces), line.index)
+          raise ::Haml::SyntaxError.new(::Haml::Error.message(:cant_use_tabs_and_spaces), line.index)
         end
 
         @flat_spaces = @indentation * (@template_tabs+1) if flat?
@@ -176,7 +176,7 @@ module Nydp
         human_indentation(line.whitespace),
         human_indentation(@indentation)
       )
-      raise SyntaxError.new(message, line.index)
+      raise ::Haml::SyntaxError.new(message, line.index)
     end
 
     private
@@ -188,7 +188,7 @@ module Nydp
       return error unless trace
 
       line = trace.match(/\d+\z/).to_s.to_i
-      SyntaxError.new(error.message, line)
+      ::Haml::SyntaxError.new(error.message, line)
     end
 
     # @private
@@ -312,16 +312,10 @@ module Nydp
 
     def plain(line, escape_html = nil)
       if block_opened?
-        raise SyntaxError.new(::Haml::Error.message(:illegal_nesting_plain), @next_line.index)
+        raise ::Haml::SyntaxError.new(::Haml::Error.message(:illegal_nesting_plain), @next_line.index)
       end
 
-      unless ::Haml::Util.contains_interpolation?(line.text)
-        return ParseNode.new(:plain, line.index + 1, :text => line.text)
-      end
-
-      escape_html = @options.escape_html && @options.mime_type != 'text/plain' if escape_html.nil?
-      line.text = ::Haml::Util.unescape_interpolation(line.text)
-      script(line, false).tap { |n| n.value[:escape_interpolation] = true if escape_html }
+      return ParseNode.new(:plain, line.index + 1, :text => line.text)
     end
 
     def script(line, escape_html = nil, preserve = false)
@@ -334,41 +328,6 @@ module Nydp
 
       ParseNode.new(:script, line.index + 1, :text => line.text, :escape_html => escape_html,
         :preserve => preserve, :keyword => keyword)
-    end
-
-    def flat_script(line, escape_html = nil)
-      raise SyntaxError.new(::Haml::Error.message(:no_ruby_code, '~')) if line.text.empty?
-      script(line, escape_html, :preserve)
-    end
-
-    def silent_script(line)
-      raise SyntaxError.new(::Haml::Error.message(:no_end), line.index) if line.text[1..-1].strip == 'end'
-
-      line = handle_ruby_multiline(line)
-      keyword = block_keyword(line.text)
-
-      check_push_script_stack(keyword)
-
-      if ["else", "elsif", "when"].include?(keyword)
-        if @script_level_stack.empty?
-          raise Haml::SyntaxError.new(::Haml::Error.message(:missing_if, keyword), @line.index)
-        end
-
-        if keyword == 'when' and !@script_level_stack.last[2]
-          if @script_level_stack.last[1] + 1 == @line.tabs
-            @script_level_stack.last[1] += 1
-          end
-          @script_level_stack.last[2] = true
-        end
-
-        if @script_level_stack.last[1] != @line.tabs
-          message = ::Haml::Error.message(:bad_script_indent, keyword, @script_level_stack.last[1], @line.tabs)
-          raise Haml::SyntaxError.new(message, @line.index)
-        end
-      end
-
-      ParseNode.new(:silent_script, @line.index + 1,
-        :text => line.text[1..-1], :keyword => keyword)
     end
 
     def check_push_script_stack(keyword)
@@ -613,12 +572,12 @@ module Nydp
     # Parses a line into tag_name, attributes, attributes_hash, object_ref, action, value
     def parse_tag(text)
       match = text.scan(/%([-:\w]+)([-:\w.#\@]*)(.+)?/)[0]
-      raise SyntaxError.new(::Haml::Error.message(:invalid_tag, text)) unless match
+      raise ::Haml::SyntaxError.new(::Haml::Error.message(:invalid_tag, text)) unless match
 
       tag_name, attributes, rest = match
 
       if !attributes.empty? && /[.#](\.|#|\z)/.match?(attributes)
-        raise SyntaxError.new(::Haml::Error.message(:illegal_element))
+        raise ::Haml::SyntaxError.new(::Haml::Error.message(:illegal_element))
       end
 
       new_attributes_hash = old_attributes_hash = last_line = nil
@@ -686,7 +645,7 @@ module Nydp
           [:BRACE_RIGHT, :EMBEXPR_END],
           count: 1)
         attributes_hash = attributes_hash.sub(METHOD_CALL_PREFIX, ?{)
-      rescue SyntaxError => e
+      rescue ::Haml::SyntaxError => e
         if e.message == ::Haml::Error.message(:unbalanced_brackets) && !@template.empty?
           text << "\n#{@next_line.text}"
           last_line += 1
@@ -838,7 +797,7 @@ module Nydp
     end
 
     def balance(*args)
-      ::Haml::Util.balance(*args) or raise(SyntaxError.new(::Haml::Error.message(:unbalanced_brackets)))
+      ::Haml::Util.balance(*args) or raise(::Haml::SyntaxError.new(::Haml::Error.message(:unbalanced_brackets)))
     end
 
     # Unlike #balance, this balances lexed tokens to balance something like `{ a: "}" }` correctly.
@@ -860,7 +819,7 @@ module Nydp
           return buf.byteslice(0, offset), buf.byteslice(offset..)
         end
       end
-      raise SyntaxError.new(::Haml::Error.message(:unbalanced_brackets))
+      raise ::Haml::SyntaxError.new(::Haml::Error.message(:unbalanced_brackets))
     end
 
     def block_opened?
