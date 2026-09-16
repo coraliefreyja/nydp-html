@@ -89,7 +89,7 @@ module Nydp
       end
 
       def convert_from_haml convertible
-        Haml::Engine.new(normalise_indentation(convertible), suppress_eval: true).render
+        HamlNoDynamicTemplate.new(generator: HamlNoDynamicGenerator) { normalise_indentation(convertible) }.render
       rescue Exception => e
         if e.line
           lines = convertible.split(/\n/)
