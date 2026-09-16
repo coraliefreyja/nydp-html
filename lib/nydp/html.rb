@@ -3,6 +3,7 @@ require "redcloth"
 require "nydp"
 require "nydp/literal"
 require "nydp/builtin"
+require "nydp/haml_parser"
 require "nydp/plugin"
 require "nydp/html/version"
 
